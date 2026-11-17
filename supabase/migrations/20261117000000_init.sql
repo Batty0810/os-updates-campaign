@@ -13,7 +13,7 @@ create table customers (
 create table vms (
   id              bigint generated always as identity primary key,
   customer_id     bigint not null references customers (id) on delete cascade,
-  vm_name         text not null unique,
+  vm_name         text unique,             -- null when the source sheet has no VM name
   status          vm_status,               -- null = not yet assessed
   hw_version      smallint,
   os_config       text,                    -- OS according to the VM configuration file
