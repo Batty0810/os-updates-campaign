@@ -37,15 +37,15 @@ create trigger vms_set_updated_at
   before update on vms
   for each row execute function set_updated_at();
 
--- Row Level Security: no anonymous access. Signed-in users can read and update.
+-- Row Level Security: anyone can read (public read-only app). Only signed-in users can update.
 alter table customers enable row level security;
 alter table vms       enable row level security;
 
-create policy "authenticated read customers" on customers
-  for select to authenticated using (true);
+create policy "public read customers" on customers
+  for select to anon, authenticated using (true);
 
-create policy "authenticated read vms" on vms
-  for select to authenticated using (true);
+create policy "public read vms" on vms
+  for select to anon, authenticated using (true);
 
 create policy "authenticated update vms" on vms
   for update to authenticated using (true) with check (true);
