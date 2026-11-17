@@ -261,6 +261,7 @@ document.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () 
 
 // ---------- export ----------
 $("export-btn").addEventListener("click", () => {
+  if (!state.user) return setStatus("Please sign in to export.", true);
   if (!window.XLSX) return setStatus("Export library still loading, try again in a moment.", true);
   const { rows, total } = summarise();
   const wb = XLSX.utils.book_new();
@@ -351,6 +352,7 @@ sb.auth.onAuthStateChange((_event, session) => {
     if (data?.user?.user_metadata?.must_change_password) openPasswordDialog(true);
   }, 0);
   $("pw-btn").hidden = !state.user;
+  $("export-btn").hidden = !state.user;
   $("auth-btn").textContent = state.user ? "Sign out" : "Sign in";
   $("user-email").textContent = state.user?.email || "";
   if (state.customers.length) renderCustomers();
