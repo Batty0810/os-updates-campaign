@@ -311,8 +311,26 @@ $("login-form").addEventListener("submit", async (e) => {
   dlg.close();
 });
 
+const pwDlg = $("pw-dialog");
+$("pw-btn").addEventListener("click", () => {
+  $("pw-form").reset();
+  $("pw-msg").textContent = "";
+  pwDlg.showModal();
+});
+$("pw-cancel").addEventListener("click", () => pwDlg.close());
+$("pw-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const pw = $("pw-new").value;
+  if (pw !== $("pw-confirm").value) { $("pw-msg").textContent = "The passwords don't match."; return; }
+  const { error } = await sb.auth.updateUser({ password: pw });
+  if (error) { $("pw-msg").textContent = error.message; return; }
+  pwDlg.close();
+  setStatus("Your password has been changed.");
+});
+
 sb.auth.onAuthStateChange((_event, session) => {
   state.user = session?.user || null;
+  $("pw-btn").hidden = !state.user;
   $("auth-btn").textContent = state.user ? "Sign out" : "Sign in";
   $("user-email").textContent = state.user?.email || "";
   if (state.customers.length) renderCustomers();

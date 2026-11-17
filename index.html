@@ -23,6 +23,7 @@
     <div class="topbar-actions">
       <button id="export-btn" class="btn btn-ghost" type="button">Export to Excel</button>
       <span id="user-email" class="user-email"></span>
+      <button id="pw-btn" class="btn btn-ghost" type="button" hidden>Change password</button>
       <button id="auth-btn" class="btn btn-cta" type="button">Sign in</button>
     </div>
   </header>
@@ -88,6 +89,19 @@
       <div class="dialog-actions">
         <button type="button" class="btn btn-ghost" id="login-cancel">Cancel</button>
         <button type="submit" class="btn btn-cta">Sign in</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="pw-dialog">
+    <form id="pw-form" method="dialog">
+      <h2>Change password</h2>
+      <label>New password <input id="pw-new" type="password" required minlength="10" autocomplete="new-password"></label>
+      <label>Confirm new password <input id="pw-confirm" type="password" required minlength="10" autocomplete="new-password"></label>
+      <p id="pw-msg" class="error" role="alert"></p>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-ghost" id="pw-cancel">Cancel</button>
+        <button type="submit" class="btn btn-cta">Save password</button>
       </div>
     </form>
   </dialog>
