@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OS Updates Campaign</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Encode+Sans+Semi+Expanded:wght@100;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <div>
+        <div class="brand-name">Nymbis Cloud Solutions</div>
+        <h1>OS Updates Campaign</h1>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <button id="export-btn" class="btn btn-ghost" type="button">Export to Excel</button>
+      <span id="user-email" class="user-email"></span>
+      <button id="auth-btn" class="btn btn-cta" type="button">Sign in</button>
+    </div>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button class="tab active" role="tab" data-view="dashboard" aria-selected="true">Dashboard</button>
+    <button class="tab" role="tab" data-view="customers" aria-selected="false">Customers &amp; meetings</button>
+  </nav>
+
+  <main>
+    <div id="status" class="status" role="status"></div>
+
+    <!-- DASHBOARD -->
+    <section id="view-dashboard" class="view">
+      <div class="kpis" id="kpis"></div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <h2>Success rate by account manager</h2>
+          <p class="muted">Completed meetings as a share of the account manager's customers</p>
+        </div>
+        <div id="chart" class="chart"></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><h2>Account managers</h2></div>
+        <div class="table-wrap">
+          <table class="data">
+            <thead><tr>
+              <th>Account manager</th><th class="num">Customers</th><th class="num">Meetings scheduled</th>
+              <th class="num">Meetings completed</th><th class="num">Success rate</th>
+            </tr></thead>
+            <tbody id="am-rows"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- CUSTOMERS -->
+    <section id="view-customers" class="view" hidden>
+      <div class="filters">
+        <input id="f-search" type="search" placeholder="Search customer or VM…" aria-label="Search">
+        <select id="f-am" aria-label="Account manager"><option value="">All account managers</option></select>
+        <select id="f-meeting" aria-label="Meeting state">
+          <option value="">All meeting states</option>
+          <option value="none">Not scheduled</option>
+          <option value="scheduled">Scheduled</option>
+          <option value="completed">Completed</option>
+        </select>
+        <span id="f-count" class="muted"></span>
+      </div>
+      <p id="readonly-note" class="note">You're viewing read-only. Sign in with your Nymbis account to book meetings.</p>
+      <div id="customer-list" class="customer-list"></div>
+    </section>
+  </main>
+
+  <dialog id="login-dialog">
+    <form id="login-form" method="dialog">
+      <h2>Sign in</h2>
+      <label>Email <input id="login-email" type="email" required autocomplete="username" placeholder="name@nymbis.cloud"></label>
+      <label>Password <input id="login-password" type="password" required autocomplete="current-password"></label>
+      <p id="login-error" class="error" role="alert"></p>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-ghost" id="login-cancel">Cancel</button>
+        <button type="submit" class="btn btn-cta">Sign in</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="tooltip" class="tooltip" hidden></div>
+</body>
+</html>
