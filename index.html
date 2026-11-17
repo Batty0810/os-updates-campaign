@@ -95,7 +95,8 @@
 
   <dialog id="pw-dialog">
     <form id="pw-form" method="dialog">
-      <h2>Change password</h2>
+      <h2 id="pw-title">Change password</h2>
+      <p id="pw-intro" class="muted" hidden>You signed in with a starting password. Please choose your own before continuing.</p>
       <label>New password <input id="pw-new" type="password" required minlength="10" autocomplete="new-password"></label>
       <label>Confirm new password <input id="pw-confirm" type="password" required minlength="10" autocomplete="new-password"></label>
       <p id="pw-msg" class="error" role="alert"></p>

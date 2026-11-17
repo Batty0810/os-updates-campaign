@@ -311,25 +311,45 @@ $("login-form").addEventListener("submit", async (e) => {
   dlg.close();
 });
 
+// Password change. When the account still has its starting password
+// (user_metadata.must_change_password), the dialog is forced and can't be dismissed.
 const pwDlg = $("pw-dialog");
-$("pw-btn").addEventListener("click", () => {
+let pwForced = false;
+function openPasswordDialog(forced) {
+  pwForced = forced;
   $("pw-form").reset();
+  $("pw-cancel").hidden = forced;
+  $("pw-title").textContent = forced ? "Set your own password" : "Change password";
+  $("pw-intro").hidden = !forced;
   $("pw-msg").textContent = "";
-  pwDlg.showModal();
-});
+  if (!pwDlg.open) pwDlg.showModal();
+}
+$("pw-btn").addEventListener("click", () => openPasswordDialog(false));
 $("pw-cancel").addEventListener("click", () => pwDlg.close());
+pwDlg.addEventListener("cancel", (e) => { if (pwForced) e.preventDefault(); }); // block Escape when forced
 $("pw-form").addEventListener("submit", async (e) => {
   e.preventDefault();
   const pw = $("pw-new").value;
   if (pw !== $("pw-confirm").value) { $("pw-msg").textContent = "The passwords don't match."; return; }
-  const { error } = await sb.auth.updateUser({ password: pw });
-  if (error) { $("pw-msg").textContent = error.message; return; }
+  const { error } = await sb.auth.updateUser({ password: pw, data: { must_change_password: false } });
+  if (error) {
+    $("pw-msg").textContent = /different from the old/i.test(error.message)
+      ? "Please choose a password different from the starting one." : error.message;
+    return;
+  }
+  pwForced = false;
   pwDlg.close();
   setStatus("Your password has been changed.");
 });
 
 sb.auth.onAuthStateChange((_event, session) => {
   state.user = session?.user || null;
+  // Re-read the user from the server (a cached session may predate the flag). Deferred so we
+  // don't call Supabase from inside its own auth callback.
+  if (state.user) setTimeout(async () => {
+    const { data } = await sb.auth.getUser();
+    if (data?.user?.user_metadata?.must_change_password) openPasswordDialog(true);
+  }, 0);
   $("pw-btn").hidden = !state.user;
   $("auth-btn").textContent = state.user ? "Sign out" : "Sign in";
   $("user-email").textContent = state.user?.email || "";
