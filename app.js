@@ -5,7 +5,9 @@ const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const ATTENDEES = ["Sean Rose", "Daniel Martins", "Jimmy Mokwena", "Jose van der Merwe", "Brendon Atwell"];
 
-const state = { customers: [], user: null };
+const state = { customers: [], user: null, role: null }; // role: admin | editor | viewer | null
+const canEdit = () => state.role === "admin" || state.role === "editor";
+const canExport = () => state.role === "admin";
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const pct = (n) => `${Math.round(n * 100)}%`;
@@ -180,7 +182,7 @@ function renderCustomers() {
     (!q || c.name.toLowerCase().includes(q) || c.vms.some((v) => (v.vm_name || "").toLowerCase().includes(q))));
 
   $("f-count").textContent = `${list.length} of ${state.customers.length} customers`;
-  $("readonly-note").hidden = !!state.user;
+  $("readonly-note").hidden = canEdit();
   const labels = { none: "Not scheduled", scheduled: "Scheduled", completed: "Completed" };
 
   $("customer-list").innerHTML = list.map((c) => {
@@ -191,7 +193,7 @@ function renderCustomers() {
         <span class="pill ${s}">${labels[s]}${c.meeting && !c.meeting.completed ? " · " + fmtDate(c.meeting.meeting_date) : ""}</span>
       </div>
       ${vmTable(c)}
-      ${state.user ? meetingEditor(c) : meetingReadonly(c)}
+      ${canEdit() ? meetingEditor(c) : meetingReadonly(c)}
     </article>`;
   }).join("") || `<p class="muted">No customers match these filters.</p>`;
 }
@@ -261,7 +263,7 @@ document.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () 
 
 // ---------- export ----------
 $("export-btn").addEventListener("click", () => {
-  if (!state.user) return setStatus("Please sign in to export.", true);
+  if (!canExport()) return setStatus("Export is restricted.", true);
   if (!window.XLSX) return setStatus("Export library still loading, try again in a moment.", true);
   const { rows, total } = summarise();
   const wb = XLSX.utils.book_new();
@@ -297,11 +299,44 @@ $("export-btn").addEventListener("click", () => {
 
 // ---------- auth ----------
 const dlg = $("login-dialog");
-$("auth-btn").addEventListener("click", async () => {
-  if (state.user) { await sb.auth.signOut(); return; }
+function openLogin() {
   $("login-error").textContent = "";
   dlg.showModal();
+}
+$("auth-btn").addEventListener("click", async () => {
+  if (state.user) { await sb.auth.signOut(); return; }
+  openLogin();
 });
+$("gate-btn").addEventListener("click", () => (state.user ? sb.auth.signOut() : openLogin()));
+
+// Show the app only to signed-in users on the access list; everyone else sees the gate.
+function applyAccess() {
+  const allowed = !!state.role;
+  $("gate").hidden = allowed;
+  $("app-main").hidden = !allowed;
+  document.querySelector(".tabs").hidden = !allowed;
+  $("export-btn").hidden = !canExport();
+  $("pw-btn").hidden = !state.user;
+  $("auth-btn").textContent = state.user ? "Sign out" : "Sign in";
+  $("auth-btn").hidden = !state.user; // the gate has its own sign-in button
+  $("user-email").textContent = state.user ? `${state.user.email}${state.role ? ` · ${state.role}` : ""}` : "";
+  $("gate-title").textContent = state.user ? "No access" : "Sign in to continue";
+  $("gate-text").textContent = state.user
+    ? "Your account isn't on the approved list for this dashboard. Ask Brendon Atwell for access."
+    : "This dashboard is only available to approved users.";
+  $("gate-btn").textContent = state.user ? "Sign out" : "Sign in";
+}
+
+async function onSignedIn() {
+  const [{ data: u }, { data: access }] = await Promise.all([
+    sb.auth.getUser(),
+    sb.from("app_users").select("role").maybeSingle(),
+  ]);
+  state.role = access?.role || null;
+  applyAccess();
+  if (u?.user?.user_metadata?.must_change_password) openPasswordDialog(true);
+  if (state.role) await load();
+}
 $("login-cancel").addEventListener("click", () => dlg.close());
 $("login-form").addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -343,19 +378,16 @@ $("pw-form").addEventListener("submit", async (e) => {
   setStatus("Your password has been changed.");
 });
 
-sb.auth.onAuthStateChange((_event, session) => {
-  state.user = session?.user || null;
-  // Re-read the user from the server (a cached session may predate the flag). Deferred so we
-  // don't call Supabase from inside its own auth callback.
-  if (state.user) setTimeout(async () => {
-    const { data } = await sb.auth.getUser();
-    if (data?.user?.user_metadata?.must_change_password) openPasswordDialog(true);
-  }, 0);
-  $("pw-btn").hidden = !state.user;
-  $("export-btn").hidden = !state.user;
-  $("auth-btn").textContent = state.user ? "Sign out" : "Sign in";
-  $("user-email").textContent = state.user?.email || "";
-  if (state.customers.length) renderCustomers();
+let lastUserId;
+sb.auth.onAuthStateChange((event, session) => {
+  const user = session?.user || null;
+  // Token refreshes fire this too; only react when the signed-in person actually changes.
+  if (event !== "INITIAL_SESSION" && (user?.id ?? null) === (lastUserId ?? null)) return;
+  lastUserId = user?.id ?? null;
+  state.user = user;
+  state.role = null;
+  state.customers = [];
+  applyAccess();
+  // Deferred so we don't call Supabase from inside its own auth callback.
+  if (user) setTimeout(onSignedIn, 0);
 });
-
-load();

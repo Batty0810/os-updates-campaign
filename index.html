@@ -28,12 +28,20 @@
     </div>
   </header>
 
-  <nav class="tabs" role="tablist">
+  <section id="gate" class="gate">
+    <div class="gate-card">
+      <h2 id="gate-title">Sign in to continue</h2>
+      <p id="gate-text" class="muted">This dashboard is only available to approved Nymbis users.</p>
+      <button id="gate-btn" class="btn btn-cta" type="button">Sign in</button>
+    </div>
+  </section>
+
+  <nav class="tabs" role="tablist" hidden>
     <button class="tab active" role="tab" data-view="dashboard" aria-selected="true">Dashboard</button>
     <button class="tab" role="tab" data-view="customers" aria-selected="false">Customers &amp; meetings</button>
   </nav>
 
-  <main>
+  <main id="app-main" hidden>
     <div id="status" class="status" role="status"></div>
 
     <!-- DASHBOARD -->
@@ -75,7 +83,7 @@
         </select>
         <span id="f-count" class="muted"></span>
       </div>
-      <p id="readonly-note" class="note">You're viewing read-only. Sign in with your Nymbis account to book meetings.</p>
+      <p id="readonly-note" class="note">You have view-only access. Account managers book and update meetings.</p>
       <div id="customer-list" class="customer-list"></div>
     </section>
   </main>
