@@ -75,6 +75,77 @@ function renderDashboard() {
 
   renderChart(rows);
   renderSchedule();
+  renderAttendees();
+}
+
+// ---------- meetings by Nymbis attendee ----------
+function attendeeSummary() {
+  const rows = ATTENDEES.map((name) => {
+    const list = state.customers.filter((c) => c.meeting?.attendee === name);
+    const held = list.filter((c) => c.meeting.completed).length;
+    return { name, total: list.length, held, upcoming: list.length - held, list };
+  });
+  const total = rows.reduce((t, r) => t + r.total, 0);
+  rows.forEach((r) => (r.share = total ? r.total / total : 0));
+  return { rows: rows.sort((a, b) => b.total - a.total || a.name.localeCompare(b.name)), total };
+}
+
+function renderAttendees() {
+  const { rows, total } = attendeeSummary();
+  if (!total) {
+    $("attendee-chart").innerHTML = `<p class="empty-chart">No meetings booked yet.</p>`;
+    return;
+  }
+  const W = 760, labelW = 170, valueW = 90, rowH = 34, barH = 16, top = 22, axisH = 24, gap = 2, r = 4;
+  const plotW = W - labelW - valueW;
+  const H = top + rows.length * rowH + axisH;
+  const max = Math.max(...rows.map((d) => d.total));
+  const step = max <= 8 ? 1 : Math.ceil(max / 6);
+  const xMax = Math.ceil(max / step) * step;
+  const x = (v) => labelW + (v / xMax) * plotW;
+  const even = total / ATTENDEES.length;
+
+  const ticks = [];
+  for (let v = 0; v <= xMax; v += step) ticks.push(v);
+  const grid = ticks.map((v) => `<line x1="${x(v)}" x2="${x(v)}" y1="${top}" y2="${H - axisH}"/>`).join("");
+  const axis = ticks.map((v) => `<text x="${x(v)}" y="${H - 6}" text-anchor="middle">${v}</text>`).join("");
+
+  // Horizontal segment from a to b; only the rightmost segment gets the rounded data end.
+  const seg = (cls, yy, a, b, roundEnd) => {
+    if (b <= a) return "";
+    const x0 = x(a) + (a > 0 ? gap : 0), w = x(b) - x0;
+    if (w <= 0) return "";
+    if (!roundEnd || w < r) return `<rect class="${cls}" x="${x0}" y="${yy}" width="${w}" height="${barH}"/>`;
+    return `<path class="${cls}" d="M${x0},${yy} h${w - r} a${r},${r} 0 0 1 ${r},${r} v${barH - 2 * r} a${r},${r} 0 0 1 -${r},${r} h-${w - r} z"/>`;
+  };
+
+  const bars = rows.map((d, i) => {
+    const yy = top + i * rowH + (rowH - barH) / 2;
+    return `<g class="col" tabindex="0" data-i="${i}">
+      <rect x="0" y="${top + i * rowH}" width="${W}" height="${rowH}" fill="transparent"/>
+      <text class="cat" x="${labelW - 10}" y="${yy + barH / 2}" dy=".35em" text-anchor="end">${esc(d.name)}</text>
+      ${seg("bar-held", yy, 0, d.held, d.upcoming === 0)}
+      ${seg("bar-upcoming", yy, d.held, d.total, true)}
+      <text class="val" x="${x(d.total) + 6}" y="${yy + barH / 2}" dy=".35em">${d.total}<tspan class="share"> · ${pct(d.share)}</tspan></text>
+    </g>`;
+  }).join("");
+
+  const evenMark = `<g class="even"><line x1="${x(even)}" x2="${x(even)}" y1="${top - 6}" y2="${H - axisH}"/>
+    <text x="${x(even)}" y="${top - 10}" text-anchor="middle">Even split ${Math.round(even * 10) / 10}</text></g>`;
+
+  $("attendee-chart").innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Meetings per Nymbis attendee, bar chart">
+    <g class="grid">${grid}</g><g class="axis">${axis}</g><g class="cat">${bars}</g>${evenMark}</svg>`;
+
+  $("attendee-chart").querySelectorAll(".col").forEach((g) => {
+    const d = rows[+g.dataset.i];
+    bindTooltip(g, () => {
+      const vs = d.total - even;
+      const cmp = Math.abs(vs) < 0.5 ? "about an even share" : `${Math.abs(Math.round(vs * 10) / 10)} ${vs > 0 ? "above" : "below"} an even share`;
+      const list = d.list.slice(0, 8).map((c) => `${esc(c.name)} · ${fmtDate(c.meeting.meeting_date)}${c.meeting.completed ? " ✓" : ""}`).join("<br>");
+      const more = d.list.length > 8 ? `<br>+${d.list.length - 8} more` : "";
+      return `<strong>${esc(d.name)}</strong><br>${d.total} meeting${d.total === 1 ? "" : "s"} (${pct(d.share)}) · ${d.held} held<br>${cmp}${list ? "<br><br>" + list + more : ""}`;
+    });
+  });
 }
 
 // Hover/focus tooltip for any chart mark.
@@ -392,6 +463,12 @@ $("export-btn").addEventListener("click", () => {
   dash.push({ "Account manager": "Total", Customers: total.customers, "Meetings scheduled": total.scheduled,
     "Meetings completed": total.completed, "Success rate": Math.round(total.rate * 1000) / 10 + "%" });
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(dash), "Dashboard");
+
+  const att = attendeeSummary();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(att.rows.map((r) => ({
+    "Nymbis attendee": r.name, Meetings: r.total, Held: r.held, "Not yet held": r.upcoming,
+    "Share of meetings": Math.round(r.share * 1000) / 10 + "%",
+  }))), "By attendee");
 
   const meetings = state.customers.map((c) => ({
     "Account manager": c.account_manager, Customer: c.name, VMs: c.vms.length,

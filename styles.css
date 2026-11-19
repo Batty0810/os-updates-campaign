@@ -98,6 +98,9 @@ main { max-width: 1200px; margin: 0 auto; padding: 24px 16px 48px; }
 .chart .today text { fill: var(--ink-muted); font-size: 11px; }
 .chart .xlab { fill: var(--ink-2); font-size: 11px; }
 .chart .xlab.today-lab { fill: var(--ink); font-weight: 500; }
+.chart .even line { stroke: var(--ink-muted); stroke-width: 1; stroke-dasharray: 4 3; }
+.chart .even text { fill: var(--ink-muted); font-size: 11px; }
+.chart .share { fill: var(--ink-muted); font-size: 12px; }
 .legend { display: flex; gap: 18px; font-size: .8rem; color: var(--ink-2); margin-bottom: 6px; }
 .legend span { display: inline-flex; align-items: center; gap: 6px; }
 .swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
