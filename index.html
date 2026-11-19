@@ -50,6 +50,27 @@
 
       <div class="panel">
         <div class="panel-head">
+          <h2>Meetings by date</h2>
+          <p class="muted">Number of customer meetings on each working day</p>
+        </div>
+        <div class="legend" aria-hidden="true">
+          <span><i class="swatch held"></i>Held</span>
+          <span><i class="swatch upcoming"></i>Not yet held</span>
+        </div>
+        <div id="schedule-chart" class="chart"></div>
+        <details class="schedule-list">
+          <summary>Show as list</summary>
+          <div class="table-wrap">
+            <table class="data">
+              <thead><tr><th>Date</th><th class="num">Meetings</th><th class="num">Held</th><th>Customers (Nymbis attendee)</th></tr></thead>
+              <tbody id="schedule-rows"></tbody>
+            </table>
+          </div>
+        </details>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
           <h2>Success rate by account manager</h2>
           <p class="muted">Completed meetings as a share of the account manager's customers</p>
         </div>

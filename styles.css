@@ -89,6 +89,23 @@ main { max-width: 1200px; margin: 0 auto; padding: 24px 16px 48px; }
 .chart .bar { fill: var(--nymbis-secondary); }
 .chart .row:hover .bar, .chart .row:focus .bar { fill: var(--nymbis-primary); }
 .chart .row { cursor: default; outline: none; }
+.chart .bar-held { fill: var(--nymbis-secondary); }
+.chart .bar-upcoming { fill: var(--soft-pink); }
+.chart .col:hover .bar-held, .chart .col:focus .bar-held { fill: var(--nymbis-primary); }
+.chart .col:hover .bar-upcoming, .chart .col:focus .bar-upcoming { fill: var(--salmon); }
+.chart .col { outline: none; }
+.chart .today line { stroke: var(--ink-muted); stroke-width: 1; stroke-dasharray: 3 3; }
+.chart .today text { fill: var(--ink-muted); font-size: 11px; }
+.chart .xlab { fill: var(--ink-2); font-size: 11px; }
+.chart .xlab.today-lab { fill: var(--ink); font-weight: 500; }
+.legend { display: flex; gap: 18px; font-size: .8rem; color: var(--ink-2); margin-bottom: 6px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+.swatch.held { background: var(--nymbis-secondary); }
+.swatch.upcoming { background: var(--soft-pink); }
+.schedule-list { margin-top: 10px; font-size: .85rem; }
+.schedule-list summary { cursor: pointer; color: var(--ink-2); }
+.empty-chart { color: var(--ink-muted); font-size: .9rem; padding: 24px 0; }
 .tooltip {
   position: fixed; z-index: 10; pointer-events: none;
   background: var(--ink); color: #fff; padding: 8px 10px; border-radius: 6px; font-size: .8rem;

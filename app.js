@@ -74,6 +74,123 @@ function renderDashboard() {
       <td class="num"><strong>${pct(total.rate)}</strong></td></tr>`;
 
   renderChart(rows);
+  renderSchedule();
+}
+
+// Hover/focus tooltip for any chart mark.
+function bindTooltip(el, html) {
+  const tip = $("tooltip");
+  const show = (ev) => {
+    tip.innerHTML = html();
+    tip.hidden = false;
+    const r = ev.type === "focus" ? el.getBoundingClientRect() : { left: ev.clientX, top: ev.clientY };
+    tip.style.left = `${Math.min(r.left + 12, window.innerWidth - 270)}px`;
+    tip.style.top = `${r.top + 14}px`;
+  };
+  el.addEventListener("mousemove", show);
+  el.addEventListener("focus", show);
+  el.addEventListener("mouseleave", () => (tip.hidden = true));
+  el.addEventListener("blur", () => (tip.hidden = true));
+}
+
+// ---------- meetings by date ----------
+const isoDay = (d) => d.toISOString().slice(0, 10);
+const todayIso = () => {
+  const n = new Date();
+  return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`;
+};
+
+function renderSchedule() {
+  const byDay = new Map();
+  for (const c of state.customers) {
+    const m = c.meeting;
+    if (!m?.meeting_date) continue;
+    if (!byDay.has(m.meeting_date)) byDay.set(m.meeting_date, []);
+    byDay.get(m.meeting_date).push({ customer: c.name, am: c.account_manager, ...m });
+  }
+
+  if (!byDay.size) {
+    $("schedule-chart").innerHTML = `<p class="empty-chart">No meetings booked yet.</p>`;
+    $("schedule-rows").innerHTML = "";
+    return;
+  }
+
+  // Continuous run of days from first to last meeting: weekdays always, weekends only if a meeting falls on one.
+  const dates = [...byDay.keys()].sort();
+  const days = [];
+  for (let d = new Date(dates[0] + "T00:00:00Z"); isoDay(d) <= dates.at(-1); d.setUTCDate(d.getUTCDate() + 1)) {
+    const iso = isoDay(d), dow = d.getUTCDay();
+    if ((dow !== 0 && dow !== 6) || byDay.has(iso)) {
+      const list = byDay.get(iso) || [];
+      const held = list.filter((m) => m.completed).length;
+      days.push({ iso, dow, list, held, upcoming: list.length - held });
+    }
+  }
+
+  const W = 760, H = 230, left = 30, right = 8, top = 22, bottom = 40;
+  const plotW = W - left - right, plotH = H - top - bottom;
+  const max = Math.max(...days.map((d) => d.list.length));
+  const step = max <= 6 ? 1 : Math.ceil(max / 5);
+  const yMax = Math.ceil(max / step) * step;
+  const y = (v) => top + plotH - (v / yMax) * plotH;
+  const band = plotW / days.length;
+  const barW = Math.max(4, Math.min(36, band * 0.6));
+  const gap = 2, r = 4;
+  const labelEvery = days.length > 30 ? 5 : days.length > 16 ? 2 : 1;
+  const today = todayIso();
+  const dayName = (iso) => new Date(iso + "T00:00:00").toLocaleDateString("en-ZA", { weekday: "short" });
+  const dayNum = (iso) => new Date(iso + "T00:00:00").toLocaleDateString("en-ZA", { day: "numeric", month: "short" });
+
+  const ticks = [];
+  for (let v = 0; v <= yMax; v += step) ticks.push(v);
+  const grid = ticks.map((v) => `<line x1="${left}" x2="${W - right}" y1="${y(v)}" y2="${y(v)}"/>`).join("");
+  const yAxis = ticks.map((v) => `<text x="${left - 8}" y="${y(v)}" dy=".35em" text-anchor="end">${v}</text>`).join("");
+
+  // A segment from value a to b; only the topmost segment gets the rounded data end.
+  const seg = (cls, x, a, b, roundTop) => {
+    if (b <= a) return "";
+    const y0 = y(a) - (a > 0 ? gap : 0), y1 = y(b), h = y0 - y1;
+    if (h <= 0) return "";
+    if (!roundTop || h < r) return `<rect class="${cls}" x="${x}" y="${y1}" width="${barW}" height="${h}"/>`;
+    return `<path class="${cls}" d="M${x},${y0} v${-(h - r)} a${r},${r} 0 0 1 ${r},${-r} h${barW - 2 * r} a${r},${r} 0 0 1 ${r},${r} v${h - r} z"/>`;
+  };
+
+  let todayMark = "";
+  const cols = days.map((d, i) => {
+    const cx = left + band * i + band / 2, x = cx - barW / 2;
+    const total = d.list.length;
+    if (d.iso === today) {
+      todayMark = `<g class="today"><line x1="${cx}" x2="${cx}" y1="${top - 14}" y2="${top + plotH}"/>
+        <text x="${cx + 4}" y="${top - 6}">Today</text></g>`;
+    }
+    const showLabel = i % labelEvery === 0 || d.iso === today;
+    return `<g class="col" tabindex="${total ? 0 : -1}" data-i="${i}">
+      <rect x="${left + band * i}" y="${top}" width="${band}" height="${plotH}" fill="transparent"/>
+      ${seg("bar-held", x, 0, d.held, d.upcoming === 0)}
+      ${seg("bar-upcoming", x, d.held, total, true)}
+      ${total ? `<text class="val" x="${cx}" y="${y(total) - 6}" text-anchor="middle">${total}</text>` : ""}
+      ${showLabel ? `<text class="xlab${d.iso === today ? " today-lab" : ""}" x="${cx}" y="${H - bottom + 16}" text-anchor="middle">${dayName(d.iso)}</text>
+      <text class="xlab${d.iso === today ? " today-lab" : ""}" x="${cx}" y="${H - bottom + 30}" text-anchor="middle">${dayNum(d.iso)}</text>` : ""}
+    </g>`;
+  }).join("");
+
+  $("schedule-chart").innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Meetings per day, column chart. A list version follows.">
+    <g class="grid">${grid}</g><g class="axis">${yAxis}</g>${todayMark}${cols}</svg>`;
+
+  $("schedule-chart").querySelectorAll(".col").forEach((g) => {
+    const d = days[+g.dataset.i];
+    if (!d.list.length) return;
+    bindTooltip(g, () => {
+      const names = d.list.slice(0, 8).map((m) => `${esc(m.customer)} · ${esc(m.attendee)}${m.completed ? " ✓" : ""}`).join("<br>");
+      const more = d.list.length > 8 ? `<br>+${d.list.length - 8} more` : "";
+      return `<strong>${fmtDate(d.iso)}</strong><br>${d.list.length} meeting${d.list.length > 1 ? "s" : ""} · ${d.held} held<br><br>${names}${more}`;
+    });
+  });
+
+  $("schedule-rows").innerHTML = days.filter((d) => d.list.length).map((d) => `<tr>
+      <td>${dayName(d.iso)} ${fmtDate(d.iso)}${d.iso === today ? " (today)" : ""}</td>
+      <td class="num">${d.list.length}</td><td class="num">${d.held}</td>
+      <td>${d.list.map((m) => `${esc(m.customer)} (${esc(m.attendee)})`).join("; ")}</td></tr>`).join("");
 }
 
 function renderChart(rows) {
