@@ -49,6 +49,19 @@
       <div class="kpis" id="kpis"></div>
 
       <div class="panel">
+        <div class="panel-head"><h2>Account managers</h2></div>
+        <div class="table-wrap">
+          <table class="data">
+            <thead><tr>
+              <th>Account manager</th><th class="num">Customers</th><th class="num">Meetings scheduled</th>
+              <th class="num">Meetings completed</th><th class="num">Success rate</th>
+            </tr></thead>
+            <tbody id="am-rows"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel">
         <div class="panel-head">
           <h2>Meetings by date</h2>
           <p class="muted">Number of customer meetings on each working day</p>
@@ -87,19 +100,6 @@
           <p class="muted">Completed meetings as a share of the account manager's customers</p>
         </div>
         <div id="chart" class="chart"></div>
-      </div>
-
-      <div class="panel">
-        <div class="panel-head"><h2>Account managers</h2></div>
-        <div class="table-wrap">
-          <table class="data">
-            <thead><tr>
-              <th>Account manager</th><th class="num">Customers</th><th class="num">Meetings scheduled</th>
-              <th class="num">Meetings completed</th><th class="num">Success rate</th>
-            </tr></thead>
-            <tbody id="am-rows"></tbody>
-          </table>
-        </div>
       </div>
     </section>
 
